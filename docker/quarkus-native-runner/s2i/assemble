@@ -1,0 +1,15 @@
+#!/bin/sh
+
+set -ex
+
+cd /tmp/src/
+if [ "$(find . -type f | grep "\-runner$" | wc -l  | sed 's/ //g')" -eq "1" ]; then
+  application=$(find . -type f | grep "\-runner$")
+  cp $application /opt/quarkus/application
+else
+  >&2 echo "Could not locate a native image. Have you build a native image using mvn -Pnative before?"
+  exit 1
+fi
+
+chmod +x /opt/quarkus/application
+echo "Done with the assembly"

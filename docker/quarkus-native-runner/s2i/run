@@ -1,0 +1,19 @@
+#!/bin/sh
+
+# This POC script is (intentionally) overly trivial.
+# a TODO future PRODUCTION version of this would probably want tomake it possible to
+# e.g. pass additional parameters to the executable, as does fabric8io-images/s2i's run script.
+
+if [ -z "$JAVA_OPTS" ]; then
+  JAVA_OPTS="-Xmx12M -Xms8M -Xmn12M"
+  echo "JAVA_OPTS environment variable was not set, using default values of ${JAVA_OPTS}"
+else
+  echo "Using custom Java opts from environment JAVA_OPTS=${JAVA_OPTS}"
+fi
+
+# This can be removed in future version (>0.11.0) since Quarkus defult will bind to 0.0.0.0
+NETWORK_OPTIONS="-Dquarkus.http.host=0.0.0.0"
+
+runcmd="/opt/quarkus/application ${NETWORK_OPTIONS} ${JAVA_OPTS}"
+
+exec ${runcmd}
