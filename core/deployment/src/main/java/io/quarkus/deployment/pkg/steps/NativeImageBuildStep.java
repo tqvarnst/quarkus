@@ -40,7 +40,7 @@ import io.quarkus.deployment.util.ProcessUtil;
 
 public class NativeImageBuildStep {
 
-    private static final java.util.logging.Logger log = Logger.getLogger(NativeImageBuildStep.class);
+    private static final Logger log = Logger.getLogger(NativeImageBuildStep.class);
     private static final String DEBUG_BUILD_PROCESS_PORT = "5005";
     private static final String GRAALVM_HOME = "GRAALVM_HOME";
 
@@ -88,6 +88,9 @@ public class NativeImageBuildStep {
         String noPIE = "";
 
         boolean isContainerBuild = nativeConfig.containerRuntime.isPresent() || nativeConfig.containerBuild;
+
+        log.info("---- isContainerBuild: " + Boolean.toString(isContainerBuild));
+
         if (isContainerBuild) {
             String containerRuntime = nativeConfig.containerRuntime.orElse("docker");
             // E.g. "/usr/bin/docker run -v {{PROJECT_DIR}}:/project --rm quarkus/graalvm-native-image"
@@ -101,6 +104,7 @@ public class NativeImageBuildStep {
                     outputPath + ":" + CONTAINER_BUILD_VOLUME_PATH + ":z", "--env", "LANG=C");
 
             if (SystemUtils.IS_OS_LINUX) {
+                log.info("Building OS is LINUX");
                 if ("docker".equals(containerRuntime)) {
                     String uid = getLinuxID("-ur");
                     String gid = getLinuxID("-gr");
@@ -131,7 +135,7 @@ public class NativeImageBuildStep {
                         log.info("Resetting the permissions for the image source system");
                         Process settingPermissionProcess = null;
                         try {
-                            final ProcessBuilder settingPermissionProcessBuilder = new ProcessBuilder(Array.asList(containerRuntime,"unshare", "chmod","-R",userId, outputPath));
+                            final ProcessBuilder settingPermissionProcessBuilder = new ProcessBuilder(Arrays.asList(containerRuntime,"unshare", "chmod","-R",userId, outputPath));
                             settingPermissionProcess = ProcessUtil.launchProcess(settingPermissionProcessBuilder,processInheritIODisabled);
                             settingPermissionProcess.waitFor();
                         } catch (IOException | InterruptedException e) {
