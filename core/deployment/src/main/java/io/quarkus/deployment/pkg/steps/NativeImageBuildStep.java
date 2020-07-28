@@ -40,7 +40,7 @@ import io.quarkus.deployment.util.ProcessUtil;
 
 public class NativeImageBuildStep {
 
-    private static final Logger log = Logger.getLogger(NativeImageBuildStep.class);
+    private static final java.util.logging.Logger log = Logger.getLogger(NativeImageBuildStep.class);
     private static final String DEBUG_BUILD_PROCESS_PORT = "5005";
     private static final String GRAALVM_HOME = "GRAALVM_HOME";
 
@@ -110,6 +110,38 @@ public class NativeImageBuildStep {
                 } else if ("podman".equals(containerRuntime)) {
                     // Needed to avoid AccessDeniedExceptions
                     nativeImage.add("--userns=keep-id");
+                    log.info("Getting Id of the container user");
+                    Process getIdProcess = null;
+                    String userId = null;
+                    try {
+                        final ProcessBuilder pb_getId= new ProcessBuilder(Arrays.asList(containerRuntime,"run","--entrypoint","/bin/bash","-ti", nativeConfig.builderImage, "-c", "'id -u' | sed 's/\r//g'"));
+                        getIdProcess = ProcessUtil.launchProcess(pb_getId, processInheritIODisabled);
+                        BufferedReader reader = new BufferedReader(new InputStreamReader(getIdProcess.getInputStream()));
+                        userId = reader.readLine();
+                        getIdProcess.waitFor();
+                    } catch (IOException | InterruptedException e) {
+                        throw new RuntimeException("Failed to get the container user id",e);
+                    } finally {
+                        if (getIdProcess != null) {
+                            getIdProcess.destroy();
+                        }
+                    }
+                    if (userId!=null) {
+                        log.info("The container user id are " + userId);
+                        log.info("Resetting the permissions for the image source system");
+                        Process settingPermissionProcess = null;
+                        try {
+                            final ProcessBuilder settingPermissionProcessBuilder = new ProcessBuilder(Array.asList(containerRuntime,"unshare", "chmod","-R",userId, outputPath));
+                            settingPermissionProcess = ProcessUtil.launchProcess(settingPermissionProcessBuilder,processInheritIODisabled);
+                            settingPermissionProcess.waitFor();
+                        } catch (IOException | InterruptedException e) {
+                            throw new RuntimeException("Failed to setting permission ", e);
+                        } finally {
+                            if (settingPermissionProcess != null) {
+                                settingPermissionProcess.destroy();
+                            }
+                        }
+                    }
                 }
             }
             nativeConfig.containerRuntimeOptions.ifPresent(nativeImage::addAll);
